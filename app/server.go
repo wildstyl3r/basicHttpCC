@@ -2,79 +2,12 @@ package main
 
 import (
 	"fmt"
-	"net/url"
-	"strconv"
 
 	// Uncomment this block to pass the first stage
 	"net"
 	"os"
 	"strings"
 )
-
-type Request struct {
-	Method  string
-	Url     *url.URL
-	Headers []string
-	Body    string
-}
-
-func readRequest(b []byte) (Request, error) {
-	r := string(b[:])
-	bodyStart := strings.Index(r, "\r\n\r\n")
-	if bodyStart == -1 {
-		bodyStart = len(r) - 1
-	}
-	head := strings.Split(r[:bodyStart], "\r\n")
-	requestLine := strings.Split(head[0], " ")
-	method := requestLine[0]
-	url, err := url.Parse(requestLine[1])
-	if err != nil {
-		return Request{}, err
-	}
-
-	body := r[bodyStart+len("\r\n\r\n") : strings.IndexByte(r, 0)]
-
-	return Request{
-		Method:  method,
-		Url:     url,
-		Headers: head[1:],
-		Body:    body,
-	}, nil
-}
-
-const (
-	HTTP_OK        = "200 OK"
-	HTTP_NOT_FOUND = "404 Not Found"
-)
-
-type Response struct {
-	Status  string
-	Headers []string
-	Body    string
-}
-
-func newResponse(status string) *Response {
-	return &Response{
-		Status: status,
-	}
-}
-
-func (r *Response) setBody(body string) *Response {
-	r.Body = body
-	return r
-}
-
-func (r *Response) addHeader(header string, val string) *Response {
-	r.Headers = append(r.Headers, header+": "+val)
-	return r
-}
-
-func (r *Response) toBytes() []byte {
-	return []byte(
-		"HTTP/1.1 " + r.Status + "\r\n" +
-			strings.Join(r.Headers, "\r\n") + "\r\n\r\n" +
-			r.Body)
-}
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -113,25 +46,23 @@ func main() {
 
 		fmt.Println(req.Url.Path)
 
-		if strings.HasPrefix(req.Url.Path, "/echo/") {
-			fmt.Println(string(newResponse(HTTP_OK).
-				addHeader("Content-Type", "text/plain").
-				addHeader("Content-Length", strconv.Itoa(len(req.Url.Path[6:]))).
-				setBody(req.Url.Path[6:]).
-				toBytes()[:]))
+		switch {
+		case strings.HasPrefix(req.Url.Path, "/echo/"):
 			conn.Write(
-				newResponse(HTTP_OK).
-					addHeader("Content-Type", "text/plain").
-					addHeader("Content-Length", strconv.Itoa(len(req.Url.Path[6:]))).
+				newResponse(StatusOK).
+					addHeader(ContentType, "text/plain").
 					setBody(req.Url.Path[6:]).
 					toBytes())
-			continue
-		}
-
-		if req.Url.Path == "/" {
-			conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-		} else {
-			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		case req.Url.Path == "/":
+			conn.Write(newResponse(StatusOK).toBytes())
+		case req.Url.Path == "/user-agent":
+			conn.Write(
+				newResponse(StatusOK).
+					addHeader(ContentType, "text/plain").
+					setBody(req.Headers[UserAgent]).
+					toBytes())
+		default:
+			conn.Write(newResponse(StatusNotFound).toBytes())
 		}
 	}
 }
