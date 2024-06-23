@@ -12,7 +12,7 @@ type Request struct {
 	Body    string
 }
 
-func readRequest(b []byte) (Request, error) {
+func ReadRequest(b []byte) (Request, error) {
 	r := string(b[:])
 	bodyStart := strings.Index(r, "\r\n\r\n")
 	if bodyStart == -1 {

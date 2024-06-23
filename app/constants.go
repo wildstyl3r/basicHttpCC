@@ -12,3 +12,10 @@ const (
 	Host          = "Host"
 	UserAgent     = "User-Agent"
 )
+
+const (
+	Get    = "GET"
+	Post   = "POST"
+	Put    = "PUT"
+	Delete = "DELETE"
+)

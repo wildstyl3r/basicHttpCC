@@ -1,17 +1,20 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 
 	// Uncomment this block to pass the first stage
 	"net"
 	"os"
-	"strings"
 )
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
+
+	workingDirectory := flag.String("directory", "/tmp/", "directory to expose files from")
+	flag.Parse()
 
 	// Uncomment this block to pass the first stage
 	//
@@ -21,48 +24,37 @@ func main() {
 		os.Exit(1)
 	}
 
-	for {
-		conn, err := l.Accept()
+	NewRouter(l).
+		RegisterRouteWithArgs(Get, "/echo/$", func(r Request, arg ...string) *Response {
+			return NewResponse(StatusOK).
+				AddHeader(ContentType, "text/plain").
+				SetBody(arg[0])
+		}).
+		RegisterRoute(Get, "/user-agent", func(r Request) *Response {
+			return NewResponse(StatusOK).
+				AddHeader(ContentType, "text/plain").
+				SetBody(r.Headers[UserAgent])
+		}).
+		RegisterRoute(Get, "/", func(r Request) *Response {
+			return NewResponse(StatusOK)
+		}).
+		RegisterRouteWithArgs(Get, "/files/$", func(r Request, arg ...string) *Response {
+			file, err := os.Open(*workingDirectory + arg[0])
+			if err != nil {
+				return NewResponse(StatusNotFound)
+			}
 
-		if err != nil {
-			fmt.Println("Error accepting connection: ", err.Error())
-			os.Exit(1)
-		}
+			var buffer [4096]byte
+			n, err := file.Read(buffer[:])
 
-		buffer := make([]byte, 4096)
-		_, err = conn.Read(buffer)
+			if err != nil {
+				return NewResponse(StatusNotFound)
+			}
 
-		if err != nil {
-			fmt.Println("Error reading from connection: ", err.Error())
-			os.Exit(1)
-		}
+			return NewResponse(StatusOK).
+				AddHeader(ContentType, "application/octet-stream").
+				SetBodyBinary(buffer[:n])
 
-		req, err := readRequest(buffer)
-
-		if err != nil {
-			fmt.Println("Error parsing request: ", err.Error())
-			os.Exit(1)
-		}
-
-		fmt.Println(req.Url.Path)
-
-		switch {
-		case strings.HasPrefix(req.Url.Path, "/echo/"):
-			conn.Write(
-				newResponse(StatusOK).
-					addHeader(ContentType, "text/plain").
-					setBody(req.Url.Path[6:]).
-					toBytes())
-		case req.Url.Path == "/":
-			conn.Write(newResponse(StatusOK).toBytes())
-		case req.Url.Path == "/user-agent":
-			conn.Write(
-				newResponse(StatusOK).
-					addHeader(ContentType, "text/plain").
-					setBody(req.Headers[UserAgent]).
-					toBytes())
-		default:
-			conn.Write(newResponse(StatusNotFound).toBytes())
-		}
-	}
+		}).
+		Up()
 }
