@@ -64,7 +64,12 @@ func (r *Router) Up() {
 
 		fmt.Println(req.Url.Path)
 
-		serviced := false
+		gzip := false
+		if strings.Contains(req.Headers[AcceptEncoding], "gzip") {
+			gzip = true
+		}
+
+		response := NewResponse(StatusNotFound)
 
 		if r.routesWArgs[req.Method] != nil {
 			for route, handler := range r.routesWArgs[req.Method] {
@@ -81,8 +86,7 @@ func (r *Router) Up() {
 							args = append(args, wip)
 						}
 					}
-					conn.Write(handler(req, args...).toBytes())
-					serviced = true
+					response = handler(req, args...)
 					break
 				}
 			}
@@ -91,15 +95,14 @@ func (r *Router) Up() {
 		if r.routes[req.Method] != nil {
 			for route, handler := range r.routes[req.Method] {
 				if req.Url.Path == route {
-					conn.Write(handler(req).toBytes())
-					serviced = true
+					response = handler(req)
 					break
 				}
 			}
 		}
-		if serviced {
-			continue
+		if gzip && len(response.Body) > 0 {
+			response.AddHeader(ContentEncoding, "gzip")
 		}
-		conn.Write(NewResponse(StatusNotFound).toBytes())
+		conn.Write(response.toBytes())
 	}
 }

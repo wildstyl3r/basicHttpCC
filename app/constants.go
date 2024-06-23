@@ -9,11 +9,13 @@ const (
 )
 
 const (
-	Accept        = "Accept"
-	ContentType   = "Content-Type"
-	ContentLength = "Content-Length"
-	Host          = "Host"
-	UserAgent     = "User-Agent"
+	Accept          = "Accept"
+	ContentType     = "Content-Type"
+	ContentLength   = "Content-Length"
+	Host            = "Host"
+	UserAgent       = "User-Agent"
+	AcceptEncoding  = "Accept-Encoding"
+	ContentEncoding = "Content-Encoding"
 )
 
 const (
