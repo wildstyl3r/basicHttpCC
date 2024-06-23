@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	// Uncomment this block to pass the first stage
 	"net"
@@ -39,6 +40,9 @@ func main() {
 			return NewResponse(StatusOK)
 		}).
 		RegisterRouteWithArgs(Get, "/files/$", func(r Request, arg ...string) *Response {
+			if strings.Contains(arg[0], "\\..\\") {
+				return NewResponse(StatusForbidden)
+			}
 			file, err := os.Open(*workingDirectory + arg[0])
 			if err != nil {
 				return NewResponse(StatusNotFound)
@@ -48,13 +52,30 @@ func main() {
 			n, err := file.Read(buffer[:])
 
 			if err != nil {
-				return NewResponse(StatusNotFound)
+				return NewResponse(StatusInternalError)
 			}
 
 			return NewResponse(StatusOK).
 				AddHeader(ContentType, "application/octet-stream").
 				SetBodyBinary(buffer[:n])
 
+		}).
+		RegisterRouteWithArgs(Post, "/files/$", func(r Request, arg ...string) *Response {
+			if strings.Contains(arg[0], "\\..\\") {
+				return NewResponse(StatusForbidden)
+			}
+			file, err := os.Create(*workingDirectory + arg[0])
+			if err != nil {
+				return NewResponse(StatusInternalError)
+			}
+
+			_, err = file.Write(r.Body)
+
+			if err != nil {
+				return NewResponse(StatusInternalError)
+			}
+
+			return NewResponse(StatusCreated)
 		}).
 		Up()
 }

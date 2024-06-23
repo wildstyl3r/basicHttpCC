@@ -1,8 +1,11 @@
 package main
 
 const (
-	StatusOK       = "200 OK"
-	StatusNotFound = "404 Not Found"
+	StatusOK            = "200 OK"
+	StatusCreated       = "201 Created"
+	StatusForbidden     = "403 Forbidden"
+	StatusNotFound      = "404 Not Found"
+	StatusInternalError = "500 Internal Server Error"
 )
 
 const (
