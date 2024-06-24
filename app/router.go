@@ -113,7 +113,7 @@ func (r *Router) Up() {
 			}
 			gw.Close()
 
-			response.Body = buf.Bytes()
+			response.SetBodyBinary(buf.Bytes())
 		}
 		conn.Write(response.toBytes())
 	}
