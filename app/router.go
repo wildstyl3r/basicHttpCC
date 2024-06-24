@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"net"
 	"os"
@@ -64,9 +66,9 @@ func (r *Router) Up() {
 
 		fmt.Println(req.Url.Path)
 
-		gzip := false
+		useGzip := false
 		if strings.Contains(req.Headers[AcceptEncoding], "gzip") {
-			gzip = true
+			useGzip = true
 		}
 
 		response := NewResponse(StatusNotFound)
@@ -100,8 +102,14 @@ func (r *Router) Up() {
 				}
 			}
 		}
-		if gzip && len(response.Body) > 0 {
+		if useGzip && len(response.Body) > 0 {
 			response.AddHeader(ContentEncoding, "gzip")
+
+			gw := gzip.NewWriter(bytes.NewBuffer(response.Body))
+			if _, err := gw.Write(response.Body); err != nil {
+				response = NewResponse(StatusInternalError)
+			}
+			gw.Close()
 		}
 		conn.Write(response.toBytes())
 	}
