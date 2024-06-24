@@ -103,13 +103,17 @@ func (r *Router) Up() {
 			}
 		}
 		if useGzip && len(response.Body) > 0 {
+			println("gzipppin")
 			response.AddHeader(ContentEncoding, "gzip")
+			var buf bytes.Buffer
+			gw := gzip.NewWriter(&buf)
 
-			gw := gzip.NewWriter(bytes.NewBuffer(response.Body))
 			if _, err := gw.Write(response.Body); err != nil {
 				response = NewResponse(StatusInternalError)
 			}
 			gw.Close()
+
+			response.Body = buf.Bytes()
 		}
 		conn.Write(response.toBytes())
 	}
