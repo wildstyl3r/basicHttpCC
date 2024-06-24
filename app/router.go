@@ -72,6 +72,7 @@ func (r *Router) Up() {
 		}
 
 		response := NewResponse(StatusNotFound)
+		served := false
 
 		if r.routesWArgs[req.Method] != nil {
 			for route, handler := range r.routesWArgs[req.Method] {
@@ -89,20 +90,22 @@ func (r *Router) Up() {
 						}
 					}
 					response = handler(req, args...)
+					served = true
 					break
 				}
 			}
 		}
 
-		if r.routes[req.Method] != nil {
+		if r.routes[req.Method] != nil && !served {
 			for route, handler := range r.routes[req.Method] {
 				if req.Url.Path == route {
 					response = handler(req)
+					served = true
 					break
 				}
 			}
 		}
-		if useGzip && len(response.Body) > 0 {
+		if useGzip && served {
 			println("gzipppin")
 			response.AddHeader(ContentEncoding, "gzip")
 			var buf bytes.Buffer
